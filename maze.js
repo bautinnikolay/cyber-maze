@@ -1,5 +1,7 @@
-let width = 100
-let height = 100
+let width = 20
+let height = 20
+
+let limit = 4
 
 function getRandom(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -24,7 +26,11 @@ map[b[0]][b[1]] = 2
 
 let sum = [a, b]
 
+let count = 2
+
 function getOne(arr) {
+    let subregionA = []
+    let subregionB = []
     while(arr.length > 0) {
         let cell = 0
         if(arr.length > 1) {
@@ -42,6 +48,7 @@ function getOne(arr) {
         }
         arr.splice(cell, 1)
     }
+    count++;
 }
 
 function isNeedAWall(x, y) {
