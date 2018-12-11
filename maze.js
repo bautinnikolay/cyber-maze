@@ -18,17 +18,17 @@ for(let x = 0; x < map.length; x++) {
 	}
 }
 
-let a = [getRandom(0, width), getRandom(0, height)]
-let b = [getRandom(0, width), getRandom(0, height)]
+let a = [getRandom(0, arr.length), getRandom(0, arr[0].lenght)]
+let b = [getRandom(0, arr.length), getRandom(0, arr[0].lenght)]
 
 map[a[0]][a[1]] = 1
 map[b[0]][b[1]] = 2
 
-let sum = [a, b]
+let subregions = []
 
 let count = 2
 
-function getOne(arr) {
+function getOne(arr, freeCell) {
     let subregionA = []
     let subregionB = []
     while(arr.length > 0) {
@@ -39,8 +39,15 @@ function getOne(arr) {
         for(let x = -1; x < 2; x++) {
             for(let y = -1; y < 2; y++) {
                 if(arr[cell][0]+x >= 0 && arr[cell][0]+x < map.length && arr[cell][1]+y >= 0 && arr[cell][1]+y < map[0].length) {
-                    if(map[arr[cell][0]+x][arr[cell][1]+y] == 0) {
+                    if(map[arr[cell][0]+x][arr[cell][1]+y] == freeCell) {
                         map[arr[cell][0]+x][arr[cell][1]+y] = map[arr[cell][0]][arr[cell][1]]
+                        if(map[arr[cell][0]][arr[cell][1]] < count) {
+                          subregionA.push(map[arr[cell][0]][arr[cell][1]])
+                          subregionA.push(map[arr[cell][0]+x][arr[cell][1]+y])
+                        } else {
+                          subregionB.push(map[arr[cell][0]][arr[cell][1]])
+                          subregionB.push(map[arr[cell][0]+x][arr[cell][1]+y])
+                        }
                         sum.push([arr[cell][0]+x, arr[cell][1]+y])
                     }
                 }
@@ -48,6 +55,7 @@ function getOne(arr) {
         }
         arr.splice(cell, 1)
     }
+    subregions.push(subregionA, subregionB)
     count++;
 }
 
@@ -69,5 +77,5 @@ function isNeedAWall(x, y) {
   return result
 }
 
-getOne(sum)
-console.log(map)
+getOne(sum, 0)
+console.log(5/2)
