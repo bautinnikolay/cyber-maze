@@ -3,7 +3,9 @@ let game = new Phaser.Game(2010, 2010, Phaser.AUTO, '', {preload: preload, creat
 let width = 100
 let height = 100
 
-let limit = 4
+let limit = 100
+
+let walks = new Set()
 
 function getRandom(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -26,29 +28,34 @@ for(let x = 0; x < map.length; x++) {
 let regions = []
 regions.push(cells)
 
-function sliceMap(arr) {
+function sliceMap(arr, counter) {
   let cellsA = []
   let cellsB = []
   let growBox = []
 
-  if(arr.length > limit*2) {
+  if(arr.length > limit) {
       let firstCell = getRandom(0, arr.length)
       let secondCell = getRandom(0, arr.length)
-
+      
+      for(let j = 0; j < arr.length; j++) {
+          map[arr[j][0]][arr[j][1]] = 0
+      }
+      
       let a = arr[firstCell]
-      let freeCell = map[a[0]][a[1]]
-      map[a[0]][a[1]] = map[a[0]][a[1]] + 2
+      let freeCell = 0
+      map[a[0]][a[1]] = counter + 1
       cellsA.push(a)
       growBox.push(a)
 
       let b = arr[secondCell]
-      map[b[0]][b[1]] = map[b[0]][b[1]] + 3
+      map[b[0]][b[1]] = counter + 2
       cellsB.push(b)
       growBox.push(b)
 
       arr.splice(firstCell, 1)
       arr.splice(secondCell, 1)
 
+      let walk = 0
 
       while(growBox.length > 0) {
           let cell = 0
@@ -60,22 +67,24 @@ function sliceMap(arr) {
                   if(growBox[cell][0]+x >= 0 && growBox[cell][0]+x < map.length && growBox[cell][1]+y >= 0 && growBox[cell][1]+y < map[0].length) {
                       if(map[growBox[cell][0]+x][growBox[cell][1]+y] == freeCell) {
                           map[growBox[cell][0]+x][growBox[cell][1]+y] = map[growBox[cell][0]][growBox[cell][1]]
-                          if(map[growBox[cell][0]][growBox[cell][1]] < freeCell+3) {
+                          if(map[growBox[cell][0]][growBox[cell][1]] < counter+2) {
                             cellsA.push([growBox[cell][0]+x, growBox[cell][1]+y])
                           } else {
                             cellsB.push([growBox[cell][0]+x, growBox[cell][1]+y])
                           }
                           growBox.push([growBox[cell][0]+x, growBox[cell][1]+y])
-                      }
+                      } 
+                  } 
                   }
               }
-          }
           growBox.splice(cell, 1)
-      }
-      if(cellsA.length > 0) {
+          }
+          
+      
+      if(cellsA.length > limit) {
           regions.push(cellsA)
       }
-      if(cellsB.lenght > 0) {
+      if(cellsB.length > limit) {
           regions.push(cellsB)
       }
       regions.shift()
@@ -93,27 +102,48 @@ function isNeedAWall(x, y) {
   } else if ( (x % 2) != 0 && (y % 2) != 0) {
       result = false
   } else if ( (x % 2) == 0 && (y % 2) == 0) {
-    if(map[Math.floor(x/2)-1][Math.floor(y/2)-1] == map[Math.floor(x/2)][Math.floor(y/2)-1] && map[Math.floor(x/2)][Math.floor(y/2)-1] == map[Math.floor(x/2)][Math.floor(y/2)] && map[Math.floor(x/2)][Math.floor(y/2)] == map[Math.floor(x/2)-1][Math.floor(y/2)] && map[Math.floor(x/2)-1][Math.floor(y/2)] == map[Math.floor(x/2)-1][Math.floor(x/2)-1]) {
+    let one = map[Math.floor(x/2)-1][Math.floor(y/2)-1]
+    let two = map[Math.floor(x/2)][Math.floor(y/2)-1]
+    let three = map[Math.floor(x/2)][Math.floor(y/2)]
+    let four = map[Math.floor(x/2)-1][Math.floor(y/2)]
+    if(one == two && two == three && three == four && four == one) {
       result = false
     }
   } else if ( (x % 2) == 0 && (y % 2) != 0) {
     if(map[Math.floor(x/2)][Math.floor(y/2)] == map[Math.floor(x/2)-1][Math.floor(y/2)]) {
       result = false
+    } else {
+        let regA = map[Math.floor(x/2)][Math.floor(y/2)]
+        let regB = map[Math.floor(x/2)-1][Math.floor(y/2)]
+        if(!walks.has(regA + ':' + regB)) {
+            result = false
+            walks.add(regA + ':' + regB)
+            walks.add(regB + ':' + regA)
+        }
     }
   } else if ( (x % 2) != 0 && (y % 2) == 0) {
     if(map[Math.floor(x/2)][Math.floor(y/2)] == map[Math.floor(x/2)][Math.floor(y/2)-1]) {
       result = false
+    } else {
+        let regA = map[Math.floor(x/2)][Math.floor(y/2)]
+        let regB = map[Math.floor(x/2)][Math.floor(y/2)-1]
+        if(!walks.has(regA + ':' + regB)) {
+            result = false
+            walks.add(regA + ':' + regB)
+            walks.add(regB + ':' + regA)
+        }
     }
-  } 
-  return result
+  }
+    return result
 }
 
 function preload() {
     game.load.image('wall', 'images/wall.png')
+    let counter = 0
     while(regions.length > 0) {
-        sliceMap(regions[0])
+        sliceMap(regions[0], counter)
+        counter = counter + 2
     }
-    console.log(map)
 }
 
 function create() {
