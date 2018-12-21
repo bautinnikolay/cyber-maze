@@ -1,34 +1,19 @@
-let game = new Phaser.Game(2010, 2010, Phaser.AUTO, '', {preload: preload, create: create, update: update})
+const {Maze} = require('../models/maze')
 
-let width = 100
-let height = 100
+let width = 200
+let height = 200
 
 let limit = 100
-
-let walks = new Set()
 
 function getRandom(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
-let map = Array.from({length: width})
-for(let i = 0; i < map.length; i++) {
-	map[i] = Array.from({length: height})
-}
-
-let cells = []
-
-for(let x = 0; x < map.length; x++) {
-  for(let y = 0; y < map[0].length; y++) {
-    map[x][y] = 0
-    cells.push([x, y])
-  }
-}
-
-let regions = []
-regions.push(cells)
-
-function sliceMap(arr, counter) {
+//Рекурсивная функция разделения массива на регионы с помощью чисел в ячейках массива
+//arr - субрегион для разделения
+//counter - метка для деления, которая увеличивается каждую итерацию на 2
+//map - исходный массив для деления
+function sliceMap(arr, counter, map, regions) {
   let cellsA = []
   let cellsB = []
   let growBox = []
@@ -36,11 +21,11 @@ function sliceMap(arr, counter) {
   if(arr.length > limit) {
       let firstCell = getRandom(0, arr.length)
       let secondCell = getRandom(0, arr.length)
-      
+
       for(let j = 0; j < arr.length; j++) {
           map[arr[j][0]][arr[j][1]] = 0
       }
-      
+
       let a = arr[firstCell]
       let freeCell = 0
       map[a[0]][a[1]] = counter + 1
@@ -73,14 +58,12 @@ function sliceMap(arr, counter) {
                             cellsB.push([growBox[cell][0]+x, growBox[cell][1]+y])
                           }
                           growBox.push([growBox[cell][0]+x, growBox[cell][1]+y])
-                      } 
-                  } 
+                      }
+                  }
                   }
               }
           growBox.splice(cell, 1)
           }
-          
-      
       if(cellsA.length > limit) {
           regions.push(cellsA)
       }
@@ -93,9 +76,10 @@ function sliceMap(arr, counter) {
   }
 }
 
-
-
-function isNeedAWall(x, y) {
+//Функция определения необходимости стены в зависимости от координат массива, возвращает true или false
+//Делает определённое количество проходов между комнатами
+//x, y - координаты; map - массив карты
+function isNeedAWall(x, y, map, walks) {
   let result = true
   if(x == 0 || y == 0 || x == (width*2) || y == (height*2)) {
 
@@ -134,30 +118,75 @@ function isNeedAWall(x, y) {
         }
     }
   }
-    return result
+  return result
 }
 
-function preload() {
-    game.load.image('wall', 'images/wall.png')
-    let counter = 0
-    while(regions.length > 0) {
-        sliceMap(regions[0], counter)
-        counter = counter + 2
+//Функция возвращает финальный массив карты, где 0 отмечены проходы и пустота, а 1 - отмечены стены
+function getFinalMaze() {
+  let finalMaze  = Array.from({length: width*2+1})
+  let map = Array.from({length: width})
+  for(let i = 0; i < map.length; i++) {
+    map[i] = Array.from({length: height})
+  }
+  for(let i = 0; i<height*2+1; i++) {
+      finalMaze[i] = Array.from({length: height})
+  }
+
+  let cells = []
+
+  for(let x = 0; x < map.length; x++) {
+    for(let y = 0; y < map[0].length; y++) {
+      map[x][y] = 0
+      cells.push([x, y])
     }
+  }
+
+  let regions = []
+  regions.push(cells)
+
+  let walks = new Set()
+
+  let counter = 0
+  while(regions.length > 0) {
+      sliceMap(regions[0], counter, map, regions)
+      counter = counter + 2
+  }
+  let coords = []
+  for(let x = 0; x < (width*2+1); x++) {
+      for(let y = 0; y < (height*2+1); y++) {
+          coords.push([x, y])
+      }
+  }
+  let playerCounter = 0
+
+  while(coords.length > 0) {
+      let cellNum = 0
+      if(coords.length > 1) {
+          cellNum = getRandom(0, coords.length)
+      }
+      let cell = coords[cellNum]
+      if(isNeedAWall(cell[0], cell[1], map, walks)) {
+        finalMaze[cell[0]][cell[1]] = 1
+      } else {
+        finalMaze[cell[0]][cell[1]] = 0
+      }
+      coords.splice(cellNum, 1)
+  }
+  return finalMaze
 }
 
-function create() {
-    game.stage.backgroundColor = "#ffffff"
-    for(let x = 0; x < (width*2+1); x++) {
-        for(let y = 0; y < (height*2+1); y++) {
-            if(isNeedAWall(x, y)) {
-                game.add.sprite(x*10, y*10, 'wall')
-            }
-        }
-    }    
-}
-function update() {
-    
+let getMaze = (x, y) => {
+  return Maze.findOne({activeStatus: true}).then((result) => {
+    if(result) {
+      return result.map[x][y]
+    } else {
+      let maze = getFinalMaze();
+      let mazeToSave = new Maze({map: [[[] ,[] ,[] ,[], []], [[], [] ,[] ,[], []], [[] ,[], maze, [], []], [[], [], [], [], []], [[], [], [], [], []]], activeStatus: true})
+      return mazeToSave.save().then((result) => {
+        return result.map[x][y]
+      }).catch((err) => console.log('wtf err 1'))
+    }
+  }).catch((err) => console.log('wtf err 2'))
 }
 
-
+module.exports = {getMaze}
