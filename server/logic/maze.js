@@ -79,10 +79,22 @@ function sliceMap(arr, counter, map, regions) {
 //Функция определения необходимости стены в зависимости от координат массива, возвращает true или false
 //Делает определённое количество проходов между комнатами
 //x, y - координаты; map - массив карты
-function isNeedAWall(x, y, map, walks) {
+function isNeedAWall(x, y, map, walks, counts) {
   let result = true
   if(x == 0 || y == 0 || x == (width*2) || y == (height*2)) {
-
+    if(x == 0 && counts.get('x') == 0) {
+      counts.set('x', 1)
+      return false;
+    } else if(y == 0 && counts.get('y') == 0) {
+      counts.set('y', 1)
+      return false
+    } else if(x == (width*2) && counts.get('xRight') == 0) {
+      counts.set('xRight', 1)
+      return false
+    } else if(y == (height*2) && counts.get('yRight') == 0) {
+      counts.set('yRight', 1)
+      return false
+    }
   } else if ( (x % 2) != 0 && (y % 2) != 0) {
       result = false
   } else if ( (x % 2) == 0 && (y % 2) == 0) {
@@ -157,15 +169,19 @@ function getFinalMaze() {
           coords.push([x, y])
       }
   }
-  let playerCounter = 0
-
+  let counts = new Map()
+  counts.set('x', 0)
+  counts.set('y', 0)
+  counts.set('xRight', 0)
+  counts.set('yRight', 0)
   while(coords.length > 0) {
       let cellNum = 0
       if(coords.length > 1) {
           cellNum = getRandom(0, coords.length)
       }
       let cell = coords[cellNum]
-      if(isNeedAWall(cell[0], cell[1], map, walks)) {
+
+      if(isNeedAWall(cell[0], cell[1], map, walks, counts)) {
         finalMaze[cell[0]][cell[1]] = 1
       } else {
         finalMaze[cell[0]][cell[1]] = 0
