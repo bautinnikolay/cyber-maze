@@ -1,5 +1,6 @@
 let game = new Phaser.Game(600, 600, Phaser.WEBGL, 'game', {preload: preload, create: create, update: update})
 let player
+let silicons
 let walls
 let loadingText
 
@@ -7,10 +8,31 @@ function getRandom(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
+Silicon = function (index, coords, game, player) {
+  let x = coords[0]
+  let y = coords[1]
+  let angles = [0, 90, 180, -90]
+
+  this.game = game
+  this.player = player
+  this.alive = true
+  this.silicon = game.add.sprite(x, y, 'silicon')
+  this.silicon.name = index.toString()
+  game.physics.enable(this.silicon, Phaser.Physics.ARCADE)
+  this.silicon.body.immovable = false
+  this.silicon.body.collideWorldBounds = true
+  this.silicon.body.bounce.setTo(1, 1)
+
+  //this.silicon.angle = angles[getRandom(0, 3)]
+  game.physics.arcade.velocityFromRotation(this.silicon.rotation, 150, this.silicon.body.velocity)
+}
+
 function preload() {
     game.load.image('wall', 'images/wall2.png')
     game.load.spritesheet('human', 'images/human2.png', 14, 14)
-    game.world.setBounds(0, 0, 8020, 8020)
+    game.load.spritesheet('silicon', 'images/silicon2.png', 14, 14)
+    game.world.setBounds(0, 0, 4020, 4020)
+    game.stage.disableVisibilityChange = true
 }
 
 function create() {
@@ -18,6 +40,8 @@ function create() {
     loadingText = game.add.text(32, 32, 'Loading...', {fill: '#000000'})
     walls = game.add.group()
     walls.enableBody = true
+    let siliconsCounter = 0
+    silicons = []
     let playerCounter = 0
     fetch('/getmaze', {method: 'POST'}).then((res) => {
       res.json().then((data) => {
@@ -30,7 +54,6 @@ function create() {
         }
         let counter = coords.length
         let percent = 10
-        loadingText.setText('Loading... ' + percent + '%')
         while(coords.length > 0) {
           let cellNum = 0
           if(coords.length > 1) {
@@ -44,7 +67,10 @@ function create() {
               if(playerCounter == 0) {
                   player = game.add.sprite(cell[0]*20, cell[1]*20, 'human')
                   playerCounter++
-              }
+              } else if(siliconsCounter < 30) {
+                  silicons.push(new Silicon(0, [cell[0]*20, cell[1]*20], game, player))
+                  siliconsCounter++
+               }
           }
           coords.splice(cellNum, 1)
           if(Math.floor(100-coords.length/(counter/100)) == percent) {
@@ -62,6 +88,12 @@ function create() {
     })
 }
 function update() {
+  for(let i = 0; i < silicons.length; i++) {
+    if(silicons[i].alive) {
+      game.physics.arcade.collide(player, silicons[i].silicon)
+      game.physics.arcade.collide(silicons[i].silicon, walls)
+    }
+  }
   cursors = game.input.keyboard.createCursorKeys()
   let fire = game.input.keyboard.addKey(Phaser.Keyboard.C)
   if(player) {
