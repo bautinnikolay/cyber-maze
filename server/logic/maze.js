@@ -1,7 +1,7 @@
 const {Maze} = require('../models/maze')
 
-let width = 100
-let height = 100
+let width = 150
+let height = 150
 
 let limit = 100
 
